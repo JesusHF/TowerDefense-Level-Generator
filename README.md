@@ -1,5 +1,7 @@
-#Tower Defense Level Generator made in MaxScript
+# Tower Defense Generator
 
-This is a project made for a university subject
+Tower Defense Level Generator made in MaxScript
 
-Models made by kenney
+This is a project made for a university subject.
+Here goes capture of the interface:
+http://imgur.com/a/3L6Fj
