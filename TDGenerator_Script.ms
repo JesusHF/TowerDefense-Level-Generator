@@ -1,9 +1,6 @@
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- INICIALIZACION ///////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
-delete objects
-free objects
-viewport.setType #view_persp_user
 try(destroyDialog generadorTD) catch()
 
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -22,8 +19,11 @@ tamZ = 6
 tamanoBloque = 10.0
 altura= 2.0
 
-sueloArray = #(#(#()))
-
+-- Camino
+sueloArray = #(#())
+startX = 0
+startY = 0
+	
 --Torres
 maxTorres = tamX*tamY/10
 usingTowerAmount = true
@@ -39,8 +39,7 @@ porDecoracion = 20
 randomIluminacion = false
 sceneShadows = true
 
-chkRandomDecoration
-	
+
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- MODELOS //////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -51,12 +50,13 @@ rio = sysInfo.currentdir + "\modelos\piezaRio.3ds"
 giroRio= sysInfo.currentdir + "\modelos\giroRio.3ds"
 puente = sysInfo.currentdir + "\modelos\puente.3ds"
 
+piedra = sysInfo.currentdir + "\modelos\piedra.3ds"
+piedraDoble = sysInfo.currentdir + "\modelos\piedraDoble.3ds"
 arbolRosa = sysInfo.currentdir + "\modelos\arbolRosa.3ds"
 arbol = sysInfo.currentdir + "\modelos\arbol.3ds"
 arbolTriple = sysInfo.currentdir + "\modelos\arbolTriple.3ds"
-piedra = sysInfo.currentdir + "\modelos\piedra.3ds"
-piedraDoble = sysInfo.currentdir + "\modelos\piedraDoble.3ds"
 
+--TODO; caminosPosibles = #(linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea)
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- FUNCIONEZ //////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -94,18 +94,77 @@ fn updateTamY ptamy = (
 	)
 )
 
-fn crearSuelo ptamX ptamY = (
-	for y= 1 to ptamY do(
-		for x=1 to ptamX do(
-			importModel suelo2
+fn crearSuelo uselessParam = (
+	sueloArray = #(#())
+	for x= 1 to tamX do(
+		append sueloArray #()
+		for y=1 to tamY do(
+			append sueloArray #()
+			
+			importModel suelo
 			baseName = $.name
 			$.name = uniquename (baseName as string)
-			--suelo[1][y][x] = "Suelo"
+			sueloArray[x][y] = $.name
 			
 			move $ [(x-1) * tamanoBloque, (y-1) * tamanoBloque, 0]
 			clearSelection()
 		)
 	)
+)
+
+fn calculaExtremos uselessParam = (
+	local type = random 0 3
+	--se calcula el inicio
+	if type == 0 then(
+		startX = random 2 tamX-1
+		startY = 1
+	)
+	else if type == 1 then (
+		startX = 1
+		startY = random 2 tamY-1
+	)
+	else if type == 2 then (
+		startX = tamX
+		startY = random 2 tamY-1
+	)
+	else if type == 3 then (
+		startX = random 2 tamX-1
+		startY = tamY
+	)
+	else (print "WRONG CALL FUNCTION")
+	
+	--se calcula el final
+	--do (local type2 = random 0 3) while (type2 == type)
+)
+
+
+
+fn crearCamino uselessParam = (
+	local terminado = false
+	calculaExtremos 0
+	
+	local posx = startX
+	local posy = startY
+	local lastpos = [0, 0]
+	local nextpos = [0, 0]
+	
+	do(		
+		local nombre = sueloArray[posx][posy]
+		execute ("select $'"+ nombre + "'")
+		
+		
+		if (findString $.name "suelo" > 0) then(
+			--TODO; FUNCION PARA OBTENER el tipo de linea que hay que usar (normal o giro)
+			-- y para calcular la ruta
+			
+			print $.pos
+			delete $
+			
+			--TODO: condicion para que termine el camino
+		)
+		
+		clearSelection()	
+	)while (not terminado) 
 )
 
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -123,27 +182,39 @@ rollout general "General" width:296 height:104(
 		button 'btnRestart' "RESTART" width:80 height:20 enabled:true  align:#right offset:[0, -25]
 	)
 	group "Level Position"(
-		spinner spinPosicionCX "X: " width:64 height:16 range:[-100,100,centroX] align:#center type:#integer
-		spinner spinPosicionCY "Y: " width:64 height:16 range:[-100,100,centroY] align:#center type:#integer
-		spinner spinPosicionCZ "Z: " width:64 height:16 range:[-100,100,centroZ] align:#center type:#integer
-		button btnCenter "CENTER" width:80 height:20 enabled:true  align:#center
+		spinner spinPosicionCX "X: " width:64 height:16 range:[-200,200,centroX] align:#center type:#float scale:0.5
+		spinner spinPosicionCY "Y: " width:64 height:16 range:[-200,200,centroY] align:#center type:#float scale:0.5
+		spinner spinPosicionCZ "Z: " width:64 height:16 range:[-50, 50,centroZ] align:#center type:#float scale:0.5
+		button btnCenter "CENTER" width:80 height:20 enabled:true  align:#left
+		button btnOrigen "ORIGIN" width:80 height:20 enabled:true  align:#right offset:[0, -25]
 		
 		on spinPosicionCX changed param do (centroX = spinPosicionCX.value)
 		on spinPosicionCY changed param do (centroY = spinPosicionCY.value)
 		on spinPosicionCZ changed param do (centroZ = spinPosicionCZ.value)
 		
+		--BOTON CENTER
 		on btnCenter pressed do (
-			spinPosicionCX.value	= tamX/2.0 * -1
-			spinPosicionCY.value	= tamY/2.0 * -1
-			spinPosicionCZ.value	= 0
+			spinPosicionCX.value = tamX*tamanoBloque/2.0 * -1.0
+			spinPosicionCY.value = tamY*tamanoBloque/2.0 * -1.0
+			spinPosicionCZ.value = 0
 			
 			centroX = spinPosicionCX.value
 			centroY = spinPosicionCY.value
 			centroZ = 0
 		)
+		--BOTON ORIGIN
+		on btnOrigen pressed do (
+			spinPosicionCX.value = 0
+			spinPosicionCY.value = 0
+			spinPosicionCZ.value = 0
+			
+			centroX = 0
+			centroY = 0
+			centroZ = 0
+		)
 	)
 	
-	group "Grid Size"(	
+	group "Grid Size"(
 		spinner spinTamX "Size X" range:[10, 40, tamX] type:#integer align:#center
 		spinner spinTamY "Size Y" range:[10, 40, tamY] type:#integer align:#center
 		
@@ -172,25 +243,40 @@ rollout general "General" width:296 height:104(
 				tamanoBloque = 10.0
 				altura = 2
 			)
-			-- print tamanoBloque
 		)
 	)
 	
+	-- BOTON RANDOM
 	on btnRandom pressed do (
-			spinTamX.value = random 10 40
-			updateTamX spinTamX.value
-			spinTamY.value = random 10 40
-			updateTamY spinTamY.value
+		spinTamX.value = random 10 40
+		updateTamX spinTamX.value
+		spinTamY.value = random 10 40
+		updateTamY spinTamY.value
 		
-			-- chkRandomDecoration
+		customDecoracion.chkRandomDecoration.state = true
+		randomPiezasD =true
+		customDecoracion.chkTreeN.enabled = false
+		customDecoracion.chkTreeT.enabled = false
+		customDecoracion.chkTreeP.enabled = false
+		customDecoracion.chkRockN.enabled = false
+		customDecoracion.chkRockD.enabled = false
+		customDecoracion.spinPDecoration.enabled = false
 	)
-		on btnRestart pressed do (
-			spinTamX.value = 10
-			updateTamX 10
-			spinTamY.value = 10
-			updateTamY 10
-			
-			
+	-- BOTON RESTART
+	on btnRestart pressed do (
+		spinTamX.value = 10
+		updateTamX 10
+		spinTamY.value = 10
+		updateTamY 10
+		
+		customDecoracion.chkRandomDecoration.state = false
+		randomPiezasD = false
+		customDecoracion.chkTreeN.enabled = true
+		customDecoracion.chkTreeT.enabled = true
+		customDecoracion.chkTreeP.enabled = true
+		customDecoracion.chkRockN.enabled = true
+		customDecoracion.chkRockD.enabled = true
+		customDecoracion.spinPDecoration.enabled = true
 	)
 )
 
@@ -243,9 +329,7 @@ rollout customDecoracion "Decoration" width:296 height:104(
 		checkBox chkRockN "Normal Rocks"
 		checkBox chkRockD "Double Rocks"
 		
-		on chkTreeN changed state do(
-			print state
-		)
+		on chkTreeN changed state do(		)
 	)
 	group "Amount"(
 		spinner spinPDecoration "Number (%)" width:100 height:16 range:[0, 100, 20] type:#integer align:#left 
@@ -276,6 +360,7 @@ rollout customDecoracion "Decoration" width:296 height:104(
 	)
 )
 
+-- ILUMINACION
 rollout customIlumination "Ilumination" width:296 height:104(
 	checkBox chkRandomIlumination "Randomize Ilumination" 
 
@@ -296,27 +381,28 @@ rollout customIlumination "Ilumination" width:296 height:104(
 rollout generar "Generate Level" width:296 height:104(
 	button 'btnGenerar' "GENERATE" width:120 height:20 align:#center
 	on btnGenerar pressed do (
-		delete objects
-		free objects
-		
-		/*sueloArray = #(#(#()))
-		for z=1 to tamZ do (
-			append sueloArray #()
-			for y=1 to tamY do (
-				append sueloArray[z] #()
-				for x=1 to tamX do (
-					append sueloArray[z][y] #()
-				)
-			)
-		)*/
-		crearSuelo tamX tamY
-		Targetcamera fov:45 nearclip:1 farclip:1000 nearrange:0 farrange:1000 mpassEnabled:off mpassRenderPerPass:off pos:[-50,-50,50] isSelected:on target:(Targetobject transform:(matrix3 [1,0,0] [0,1,0] [0,0,1] [50 ,50,1]))
+		if(queryBox  "Escene Objects will be DELETED. Continue?" == true) then (
+			--Borrar objetos
+			delete objects
+			free objects
+			
+			--Generar Mapa
+			crearSuelo 0
+			crearCamino 0
+			
+			--Crear Camara
+			local camx = centroX - 50
+			local camy = centroy - 50
+			local camz = 50
+			local targetx = (centroX + tamX * tamanoBloque/2.0)
+			local targety = (centroY + tamY * tamanoBloque/2.0)
+			Targetcamera fov:45 nearclip:1 farclip:1000 nearrange:0 farrange:1000 mpassEnabled:off mpassRenderPerPass:off pos:[camx,camy,camz] isSelected:on target:(Targetobject transform:(matrix3 [1,0,0] [0,1,0] [0,0,1] [targetx,targety,1]))
+		)
 	)
 )
 
-
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
--- GENERAR MENÚ /////////////////////////////////////////////////////////////////////////////////////////////////////// --
+-- GENERAR MENU /////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 
 createdialog generadorTD
