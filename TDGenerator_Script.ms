@@ -14,7 +14,6 @@ centroZ = 0
 
 tamX = 10
 tamY = 10
-tamZ = 6
 
 tamanoBloque = 10.0
 altura= 2.0
@@ -23,6 +22,8 @@ altura= 2.0
 sueloArray = #(#())
 startX = 0
 startY = 0
+caminoRecto = 0
+ngiros = 0
 	
 --Torres
 maxTorres = tamX*tamY/10
@@ -137,33 +138,233 @@ fn calculaExtremos uselessParam = (
 	--do (local type2 = random 0 3) while (type2 == type)
 )
 
+	else if type == 3 then (
+		limits = [-1, 1]
+	)
+	
+	return limits
+)
 
+--Devuelve un entero que representa la posicion de cada coord
+fn comparaPos vieja nueva = (
+	if (vieja.x == nueva.x) then (
+		if(vieja.y == nueva.y) then return -1
+		if(nueva.y < vieja.y) then return 3
+		if(nueva.y > vieja.y) then return 0
+	)
+	else if (vieja.y == nueva.y) then (
+		if(nueva.x < vieja.x) then return 2
+		if(nueva.x > vieja.x) then return 1
+	)
+)
+
+--Devuelve el string del modelo a importar
+fn getPiezaCamino tipoModelo last actual next = (
+	--caso 0: abajo a arriba
+	if (last.y < next.y) then(
+		local tipoG = comparaPos actual next
+		
+		--importModel 
+	)
+	
+	
+	--caso 1: izquierda a derecha
+	--caso 2: derecha a izquierda
+	--caso 3: arriba a abajo
+	
+)
+
+--Devuelve la distancia trazando la direccion hasta que colisiona con algo
+fn checkDirection lastP actualP = (
+	local distancia = 0
+	local nombre = ""
+	
+	if (lastP.x == actualP.x) then(
+		if (actualP.y > lastP.y) then (
+			--en el caso de que la x sea igual y apunta hacia arriba
+			for y = actualP.y to tamY do(
+				distancia += 1
+				nombre = sueloArray[actualP.x][y]
+				
+				if (findString nombre "suelo" < 0) then return distancia
+			)
+		)
+		else (
+			--en el caso de que la x sea igual y apunta hacia abajo
+			for y = actualP.y to 1 do(
+				distancia += 1
+				nombre = sueloArray[actualP.x][y]
+				
+				if (findString nombre "suelo" < 0) then return distancia
+			)
+		)
+	)
+	else(
+		if (actualP.x > lastP.x) then (
+			--en el caso de que la y sea igual y apunta hacia la derecha
+			for x = actualP.x to tamX do(
+				distancia += 1
+				nombre = sueloArray[x][actualP.y]
+				
+				if (findString nombre "suelo" < 0) then return distancia
+			)
+		)
+		else (
+			--en el caso de que la y sea igual y apunta hacia la izquierda
+			for x = actualP.x to 1 do(
+				distancia += 1
+				nombre = sueloArray[x][actualP.y]
+				
+				if (findString nombre "suelo" < 0) then return distancia
+			)
+		)
+	)
+	/*
+	print actualP
+	print lastP
+	print nombre
+	*/
+	return distancia
+)
+
+--Devuelve la posicion cardinal proxima al valor por parametro
+fn getCardinal pactual plast = (
+	local var2return = [plast.x,plast.y]
+	
+	local possiblesRoutes = #([pactual.x-1, pactual.y], [pactual.x, pactual.y+1], [pactual.x+1, pactual.y],  [pactual.x, pactual.y-1])
+	local rand = random 1 4
+	
+	local dist = checkDirection pactual possiblesRoutes[rand]
+	if (dist > 7) then (
+		var2return = possiblesRoutes[rand]
+		caminoRecto = random 1 7
+	)
+	else (
+		for pos = 1 to 4 do(
+			dist = checkDirection pactual possiblesRoutes[pos]
+			if (dist > 7) then var2return = possiblesRoutes[pos]
+		)
+	)
+	return var2return
+)
+
+--TODO : arreglar metodo
+
+--Actualiza los vectores de movimiento
+fn updatePosition limits &last &actual &next = (
+	last = actual
+	actual = next
+	
+	local opcion = comparaPos last actual
+	
+	print caminoRecto
+	--Se continua recto
+	if (caminoRecto > 0) then (
+		print "avanzo recto"
+		if(opcion == 0) then next = [next.x, next.y+1]
+		else if(opcion == 1) then next = [next.x+1, next.y]
+		else if(opcion == 2) then next = [next.x-1, next.y]
+		else if(opcion == 3) then next = [next.x, next.y-1]
+		caminoRecto -= 1
+	)
+	--Se elige giro
+	else (
+		print "avanzo girando"
+		next = getCardinal actual last			
+	)
+)
+
+--Genera el rio
+fn crearRio uselessParam = (
+	local terminado = false
+	caminoRecto = random 1 5
+	
+	--se declaran las posiciones que se iran actualizando
+	local lastpos = [0, 0]
+	local actualpos = [0, 0]
+	local nextpos = [0, 0]
+	local limites = [0, 0]
+	
+	--se encuentra la posicion inicial del rio
+	local tipo = startCamino &actualpos &lastpos &nextpos
+	limites = getLimites tipo
+	print "posicion inicial"
+	print actualpos
+	print "limites"
+	print limites
+	do(
+		print "posicion inicial"
+		print actualpos
+		print "posicion siguiente"
+		print nextpos
+		--se recorre la matriz de nombres y se selecciona el actual
+		local nombre = sueloArray[actualpos.x][actualpos.y]
+		--print nombre
+		execute ("select $'"+ nombre + "'")
+		
+		--se comprueba que la casilla seleccionada sea una pieza de suelo
+		if (findString $.name "suelo" > 0) then(
+			local object2delete = $
+			--getPiezaCamino 1 lastpos actualpos nextpos
+			--$.pos = object2delete.pos
+			-- sueloArray[actualpos.x][actualpos.y] = "piezaRio"
+			delete object2delete
+			
+			updatePosition limites &lastpos &actualpos &nextpos
+			
+			if (lastpos.x == limites.x or lastpos.y == limites.y) then
+				terminado = true
+		)
+		else(
+			print "PIEZA INESPERADA: "+$.name
+		)
+		clearSelection()
+	)while (not terminado)
+)
 
 fn crearCamino uselessParam = (
 	local terminado = false
-	calculaExtremos 0
 	
-	local posx = startX
-	local posy = startY
 	local lastpos = [0, 0]
+	local actualpos = [0, 0]
 	local nextpos = [0, 0]
+	local limites = [0, 0]
 	
-	do(		
-		local nombre = sueloArray[posx][posy]
+	--se encuentra la posicion inicial del camino
+	local tipo = startCamino &actualpos &lastpos &nextpos
+	limites = getLimites tipo
+	
+	
+	
+	/*
+	print lastpos
+	print actualpos
+	print nextpos
+	*/
+	do(
+		--se recorre la matriz de nombres y se selecciona el actual
+		local nombre = sueloArray[actualpos.x][actualpos.y]		
 		execute ("select $'"+ nombre + "'")
 		
-		
+		--se comprueba que la casilla seleccionada sea una pieza de suelo
 		if (findString $.name "suelo" > 0) then(
+			local object2delete = $
+			getPiezaCamino 0 lastpos actualpos nextpos
+			$.pos = object2delete.pos
+			delete object2delete
+			
+			--nextPosCamino lastpos nextpos
 			--TODO; FUNCION PARA OBTENER el tipo de linea que hay que usar (normal o giro)
-			-- y para calcular la ruta
-			
-			print $.pos
-			delete $
-			
+			-- y para calcular la ruta			
 			--TODO: condicion para que termine el camino
 		)
-		
-		clearSelection()	
+		else if (findString $.name "piezaRio" > 0) then(
+			local object2delete = $
+			--getPuente lastpos actualpos nextpos
+			
+			delete object2delete
+		)
+		clearSelection()
 	)while (not terminado) 
 )
 
@@ -388,7 +589,8 @@ rollout generar "Generate Level" width:296 height:104(
 			
 			--Generar Mapa
 			crearSuelo 0
-			crearCamino 0
+			crearRio 0
+			--crearCamino 0
 			
 			--Crear Camara
 			local camx = centroX - 50
