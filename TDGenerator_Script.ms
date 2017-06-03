@@ -57,7 +57,7 @@ arbolRosa = sysInfo.currentdir + "\modelos\arbolRosa.3ds"
 arbol = sysInfo.currentdir + "\modelos\arbol.3ds"
 arbolTriple = sysInfo.currentdir + "\modelos\arbolTriple.3ds"
 
---TODO; caminosPosibles = #(linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea)
+caminosPosibles = #(#(linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea), #())
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- FUNCIONEZ //////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -113,31 +113,63 @@ fn crearSuelo uselessParam = (
 	)
 )
 
-fn calculaExtremos uselessParam = (
+--Empieza el camino
+fn startCamino &actual &last &next = (
 	local type = random 0 3
+	local maxX = tamX-1
+	local maxY = tamY-1
 	--se calcula el inicio
 	if type == 0 then(
-		startX = random 2 tamX-1
+		startX = random 2 maxX
 		startY = 1
+		
+		last = [startX, 0]
+		actual = [startX, startY]
+		next = [startX, 2]
 	)
 	else if type == 1 then (
 		startX = 1
-		startY = random 2 tamY-1
+		startY = random 2 maxY
+
+		last = [0, startY]
+		actual = [startX, startY]
+		next = [2, startY]
 	)
 	else if type == 2 then (
 		startX = tamX
-		startY = random 2 tamY-1
+		startY = random 2 maxY
+		
+		last = [startX+1, startY]
+		actual = [startX, startY]
+		next = [startX-1, startY]
 	)
 	else if type == 3 then (
-		startX = random 2 tamX-1
+		startX = random 2 maxX
 		startY = tamY
+		
+		last = [startX, startY+1]
+		actual = [startX, startY]
+		next = [startX, startY-1]
 	)
 	else (print "WRONG CALL FUNCTION")
 	
+	return type
 	--se calcula el final
 	--do (local type2 = random 0 3) while (type2 == type)
 )
 
+--Devuelve los limites del rio/nivel donde termina
+fn getLimites type = (
+	local limits = [-1, -1]
+	if type == 0 then(
+		limits = [-1, tamY]
+	)
+	else if type == 1 then (
+		limits = [tamX, -1]
+	)
+	else if type == 2 then (
+		limits = [1, -1]
+	)
 	else if type == 3 then (
 		limits = [-1, 1]
 	)
@@ -247,7 +279,6 @@ fn getCardinal pactual plast = (
 	)
 	return var2return
 )
-
 --TODO : arreglar metodo
 
 --Actualiza los vectores de movimiento
