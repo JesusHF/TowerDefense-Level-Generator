@@ -19,7 +19,7 @@ tamanoBloque = 10.0
 altura= 2.0
 
 -- Camino
-sueloArray = #(#())
+sueloArray = #()
 startX = 0
 startY = 0
 caminoRecto = 0
@@ -57,7 +57,8 @@ arbolRosa = sysInfo.currentdir + "\modelos\arbolRosa.3ds"
 arbol = sysInfo.currentdir + "\modelos\arbol.3ds"
 arbolTriple = sysInfo.currentdir + "\modelos\arbolTriple.3ds"
 
-caminosPosibles = #(#(linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea, linea, giroLinea, giroLinea), #())
+caminosPosibles = #(linea, giroLinea)
+riosPosibles = #(rio, giroRio)
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- FUNCIONEZ //////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -96,14 +97,14 @@ fn updateTamY ptamy = (
 )
 
 fn crearSuelo uselessParam = (
-	sueloArray = #(#())
+	sueloArray = #()
 	for x= 1 to tamX do(
 		append sueloArray #()
 		for y=1 to tamY do(
-			append sueloArray #()
+			append sueloArray[x] #()
 			
 			importModel suelo
-			baseName = $.name
+			local baseName = $.name
 			$.name = uniquename (baseName as string)
 			sueloArray[x][y] = $.name
 			
@@ -160,20 +161,19 @@ fn startCamino &actual &last &next = (
 
 --Devuelve los limites del rio/nivel donde termina
 fn getLimites type = (
-	local limits = [-1, -1]
+	local limits = #(0, 0, 0, 0)
 	if type == 0 then(
-		limits = [-1, tamY]
+		limits = #(1, tamX, 1, tamY)
 	)
 	else if type == 1 then (
-		limits = [tamX, -1]
+		limits = #(1, tamX, 1, tamY)
 	)
 	else if type == 2 then (
-		limits = [1, -1]
+		limits = #(1, tamX, 1, tamY)
 	)
 	else if type == 3 then (
-		limits = [-1, 1]
+		limits = #(1, tamX, 1, tamY)
 	)
-	
 	return limits
 )
 
@@ -190,8 +190,19 @@ fn comparaPos vieja nueva = (
 	)
 )
 
---Devuelve el string del modelo a importar
-fn getPiezaCamino tipoModelo last actual next = (
+fn posPorOpcion option nextP= (
+	local next2return = [0,0]
+	
+	if(option == 0) then next2return = [nextP.x, nextP.y+1]
+	else if(option == 1) then next2return = [nextP.x+1, nextP.y]
+	else if(option == 2) then next2return = [nextP.x-1, nextP.y]
+	else if(option == 3) then next2return = [nextP.x, nextP.y-1]
+	
+	return next2return
+)
+
+--Importa el modelo necesario para el camino
+fn getPiezaCamino last actual next = (
 	--caso 0: abajo a arriba
 	if (last.y < next.y) then(
 		local tipoG = comparaPos actual next
@@ -203,7 +214,38 @@ fn getPiezaCamino tipoModelo last actual next = (
 	--caso 1: izquierda a derecha
 	--caso 2: derecha a izquierda
 	--caso 3: arriba a abajo
+)
+
+--Importa el modelo necesario para el rio
+fn getPiezaRio last actual next = (
+	local tipoLast = comparaPos last actual
+	local tipoNext = comparaPos actual next
 	
+	--Linea recta
+	if(tipoLast == tipoNext) then(
+		importModel riosPosibles[1]
+		if(tipoLast == 0 or tipoLast == 3) then rotate $ (angleaxis 90 [0,0,1])
+	)
+	--Giro rio
+	else(
+		importModel riosPosibles[2]
+		print "posiciones"
+		print ((last as string) + " " + (actual as string) + " " + (next as string))
+		print "tipos"
+		print tipoLast
+		print tipoNext
+		
+		if(tipoLast == 0) then (
+			rotate $ (angleaxis -90 [0,0,1])
+			if(tipoNext == 2) then rotate $ (angleaxis -90 [0,0,1])
+		)
+		else if (tipoLast == 1) then (
+			rotate $ (angleaxis 90 [0,0,1])
+			if(tipoNext == 3) then rotate $ (angleaxis 90 [0,0,1])
+		)
+		else if (tipoLast == 2 and tipoNext == 3) then rotate $ (angleaxis -90 [0,0,1])
+		else if (tipoLast == 3 and tipoNext == 2) then rotate $ (angleaxis 90 [0,0,1])
+	)
 )
 
 --Devuelve la distancia trazando la direccion hasta que colisiona con algo
@@ -263,23 +305,40 @@ fn checkDirection lastP actualP = (
 fn getCardinal pactual plast = (
 	local var2return = [plast.x,plast.y]
 	
-	local possiblesRoutes = #([pactual.x-1, pactual.y], [pactual.x, pactual.y+1], [pactual.x+1, pactual.y],  [pactual.x, pactual.y-1])
-	local rand = random 1 4
+	local possiblesRoutes = #()
+	if (pactual.y == plast.y) then 
+		possiblesRoutes = #([pactual.x, pactual.y+1], [pactual.x, pactual.y-1])
+	else 
+		possiblesRoutes = #([pactual.x-1, pactual.y],  [pactual.x+1, pactual.y])
 	
-	local dist = checkDirection pactual possiblesRoutes[rand]
-	if (dist > 7) then (
-		var2return = possiblesRoutes[rand]
+	local dist1 = checkDirection pactual possiblesRoutes[1]
+	/*print possiblesRoutes[1]
+	print dist1*/
+	
+	local dist2 = checkDirection pactual possiblesRoutes[2]
+	/*print possiblesRoutes[2]
+	print dist2*/
+
+	if(dist1 > 7 and dist2>7) then(
+		var2return = possiblesRoutes[random 1 2]
 		caminoRecto = random 1 7
 	)
+	else if (dist1 > dist2) then(
+		var2return = possiblesRoutes[1]
+		
+		local maxDist = 7
+		if (dist1 < maxDist) then maxDist=dist1
+		caminoRecto = random 1 maxDist
+	)
 	else (
-		for pos = 1 to 4 do(
-			dist = checkDirection pactual possiblesRoutes[pos]
-			if (dist > 7) then var2return = possiblesRoutes[pos]
-		)
+		var2return = possiblesRoutes[2]
+		
+		local maxDist = 7
+		if (dist2 < maxDist) then maxDist=dist2
+		caminoRecto = random 1 maxDist
 	)
 	return var2return
 )
---TODO : arreglar metodo
 
 --Actualiza los vectores de movimiento
 fn updatePosition limits &last &actual &next = (
@@ -288,20 +347,28 @@ fn updatePosition limits &last &actual &next = (
 	
 	local opcion = comparaPos last actual
 	
-	print caminoRecto
 	--Se continua recto
 	if (caminoRecto > 0) then (
-		print "avanzo recto"
-		if(opcion == 0) then next = [next.x, next.y+1]
-		else if(opcion == 1) then next = [next.x+1, next.y]
-		else if(opcion == 2) then next = [next.x-1, next.y]
-		else if(opcion == 3) then next = [next.x, next.y-1]
+		print("Avanzo recto. CaminoRecto: "+(caminoRecto as String) )
+		
+		next = posPorOpcion opcion next
 		caminoRecto -= 1
+		
+		if(next.x == limits[1] or next.x == limits[2] or next.y == limits[3] or next.y == limits[4]) then
+			caminoRecto = 2
 	)
 	--Se elige giro
 	else (
-		print "avanzo girando"
-		next = getCardinal actual last			
+		local posibleNext = posPorOpcion opcion next
+		if(posibleNext.x == limits[1] or posibleNext.x == limits[2] or posibleNext.y == limits[3] or posibleNext.y == limits[4]) then(
+			print "casi giro al final del mapa :D"
+			next = posibleNext
+			caminoRecto = 2
+		)
+		else (
+			print("Avanzo girando. CaminoRecto: "+(caminoRecto as String) )
+			next = getCardinal actual last			
+		)
 	)
 )
 
@@ -314,20 +381,19 @@ fn crearRio uselessParam = (
 	local lastpos = [0, 0]
 	local actualpos = [0, 0]
 	local nextpos = [0, 0]
-	local limites = [0, 0]
 	
-	--se encuentra la posicion inicial del rio
+	--se encuentra la posicion inicial del rio y se obtienen los limites
 	local tipo = startCamino &actualpos &lastpos &nextpos
-	limites = getLimites tipo
-	print "posicion inicial"
+	local limites = getLimites tipo
+	local endPrepared = false
+	
+	/*
+	print "posicion inicial"	
 	print actualpos
 	print "limites"
 	print limites
-	do(
-		print "posicion inicial"
-		print actualpos
-		print "posicion siguiente"
-		print nextpos
+	*/
+	do(		
 		--se recorre la matriz de nombres y se selecciona el actual
 		local nombre = sueloArray[actualpos.x][actualpos.y]
 		--print nombre
@@ -336,15 +402,26 @@ fn crearRio uselessParam = (
 		--se comprueba que la casilla seleccionada sea una pieza de suelo
 		if (findString $.name "suelo" > 0) then(
 			local object2delete = $
-			--getPiezaCamino 1 lastpos actualpos nextpos
-			--$.pos = object2delete.pos
-			-- sueloArray[actualpos.x][actualpos.y] = "piezaRio"
+			local baseName = $.name
+			
+			getPiezaRio lastpos actualpos nextpos
+			$.pos = object2delete.pos
+			$.name = uniquename (baseName as string)
+			--sueloArray[actualpos.x][actualpos.y] = $.name
+			
 			delete object2delete
 			
 			updatePosition limites &lastpos &actualpos &nextpos
 			
-			if (lastpos.x == limites.x or lastpos.y == limites.y) then
-				terminado = true
+			print("Actual: "+(actualpos as String) + "Siguiente: "+(nextpos as String) )
+
+
+			
+			if (lastpos.x == limites[1] or lastpos.x == limites[2] or lastpos.y == limites[3] or lastpos.y == limites[4]) then(
+				if (endPrepared) then
+					terminado = true
+				else endPrepared = true
+			)
 		)
 		else(
 			print "PIEZA INESPERADA: "+$.name
