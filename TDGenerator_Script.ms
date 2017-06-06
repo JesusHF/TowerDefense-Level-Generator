@@ -23,7 +23,9 @@ sueloArray = #()
 startX = 0
 startY = 0
 caminoRecto = 0
-ngiros = 0
+zonaPeligrosa = false
+girarArriba = false
+girarAbajo = false
 	
 --Torres
 maxTorres = tamX*tamY/10
@@ -35,6 +37,11 @@ randomPiezasT = false
 --Decoracion
 randomPiezasD = false
 porDecoracion = 20
+arboles = true
+arbolesTriples = true
+arbolesRosas = true
+piedras = true
+piedrasDobles = true
 
 --Iluminacion
 randomIluminacion = false
@@ -57,7 +64,35 @@ arbolRosa = sysInfo.currentdir + "\modelos\arbolRosa.3ds"
 arbol = sysInfo.currentdir + "\modelos\arbol.3ds"
 arbolTriple = sysInfo.currentdir + "\modelos\arbolTriple.3ds"
 
-caminosPosibles = #(linea, giroLinea)
+baseTorre1 = sysInfo.currentdir + "\modelos\\torres\baseTorre1.3ds"
+baseTorre2 = sysInfo.currentdir + "\modelos\\torres\baseTorre2.3ds"
+baseTorre3 = sysInfo.currentdir + "\modelos\\torres\baseTorre3.3ds"
+baseTorre4 = sysInfo.currentdir + "\modelos\\torres\baseTorre4.3ds"
+baseTorre5 = sysInfo.currentdir + "\modelos\\torres\baseTorre5.3ds"
+baseTorre6 = sysInfo.currentdir + "\modelos\\torres\baseTorre6.3ds"
+baseTorre7 = sysInfo.currentdir + "\modelos\\torres\baseTorre7.3ds"
+basesT = #(baseTorre1, baseTorre2, baseTorre3, baseTorre4, baseTorre5, baseTorre6, baseTorre7)
+
+cuerpoTorre1 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre1.3ds"
+cuerpoTorre2 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre2.3ds"
+cuerpoTorre3 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre3.3ds"
+cuerpoTorre4 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre4.3ds"
+cuerpoTorre5 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre5.3ds"
+cuerpoTorre6 = sysInfo.currentdir + "\modelos\\torres\cuerpoTorre6.3ds"
+cuerposT = #(cuerpoTorre1, cuerpoTorre2, cuerpoTorre3, cuerpoTorre4, cuerpoTorre5, cuerpoTorre6)
+
+techoTorre1 = sysInfo.currentdir + "\modelos\\torres\\techoTorre1.3ds"
+techoTorre2 = sysInfo.currentdir + "\modelos\\torres\\techoTorre2.3ds"
+techoTorre3 = sysInfo.currentdir + "\modelos\\torres\\techoTorre3.3ds"
+techoTorre4 = sysInfo.currentdir + "\modelos\\torres\\techoTorre4.3ds"
+techoTorre5 = sysInfo.currentdir + "\modelos\\torres\\techoTorre5.3ds"
+techoTorre6 = sysInfo.currentdir + "\modelos\\torres\\techoTorre6.3ds"
+techoTorre7 = sysInfo.currentdir + "\modelos\\torres\\techoTorre7.3ds"
+techoTorre8 = sysInfo.currentdir + "\modelos\\torres\\techoTorre8.3ds"
+techoTorre9 = sysInfo.currentdir + "\modelos\\torres\\techoTorre9.3ds"
+techosT = #(techoTorre1, techoTorre2, techoTorre3, techoTorre4, techoTorre5, techoTorre6, techoTorre7, techoTorre8, techoTorre9)
+
+caminosPosibles = #(linea, giroLinea, puente)
 riosPosibles = #(rio, giroRio)
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
 -- FUNCIONEZ //////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -80,17 +115,9 @@ fn importModel nombreFichero = (
 	else (print "UNHANDLED ERROR OF BLOCK SIZE")
 )
 
-fn updateTamX ptamx = (
-	tamX = ptamx
-	maxTorres = tamX*tamY/10
-	if nTorres > maxTorres then (
-		nTorres = maxTorres
-	)
-)
-
-fn updateTamY ptamy = (
-	tamY = ptamy
-	maxTorres = tamX*tamY/10
+fn updateNTowers ptamX ptamY= (
+	local areaG = ptamX * ptamY
+	maxTorres = 9 + (areaG/100)
 	if nTorres > maxTorres then (
 		nTorres = maxTorres
 	)
@@ -106,6 +133,10 @@ fn crearSuelo uselessParam = (
 			importModel suelo
 			local baseName = $.name
 			$.name = uniquename (baseName as string)
+			
+			--mybox = box length:10 width:10 height:4
+			--select mybox 
+			$.name = uniquename ("suelo")
 			sueloArray[x][y] = $.name
 			
 			move $ [(x-1) * tamanoBloque, (y-1) * tamanoBloque, 0]
@@ -116,12 +147,12 @@ fn crearSuelo uselessParam = (
 
 --Empieza el camino
 fn startCamino &actual &last &next = (
-	local type = random 0 3
-	local maxX = tamX-1
-	local maxY = tamY-1
+	local type = 1
+	local maxX = tamX-2
+	local maxY = tamY-2
 	--se calcula el inicio
 	if type == 0 then(
-		startX = random 2 maxX
+		startX = random 3 maxX
 		startY = 1
 		
 		last = [startX, 0]
@@ -130,7 +161,7 @@ fn startCamino &actual &last &next = (
 	)
 	else if type == 1 then (
 		startX = 1
-		startY = random 2 maxY
+		startY = random 3 maxY
 
 		last = [0, startY]
 		actual = [startX, startY]
@@ -138,14 +169,14 @@ fn startCamino &actual &last &next = (
 	)
 	else if type == 2 then (
 		startX = tamX
-		startY = random 2 maxY
+		startY = random 3 maxY
 		
 		last = [startX+1, startY]
 		actual = [startX, startY]
 		next = [startX-1, startY]
 	)
 	else if type == 3 then (
-		startX = random 2 maxX
+		startX = random 3 maxX
 		startY = tamY
 		
 		last = [startX, startY+1]
@@ -193,27 +224,41 @@ fn comparaPos vieja nueva = (
 fn posPorOpcion option nextP= (
 	local next2return = [0,0]
 	
-	if(option == 0) then next2return = [nextP.x, nextP.y+1]
+	if(option == 0 and nextP.y<tamY) then next2return = [nextP.x, nextP.y+1]
 	else if(option == 1) then next2return = [nextP.x+1, nextP.y]
 	else if(option == 2) then next2return = [nextP.x-1, nextP.y]
-	else if(option == 3) then next2return = [nextP.x, nextP.y-1]
+	else if(option == 3 and nextP.y>1) then next2return = [nextP.x, nextP.y-1]
+	else return nextP
 	
 	return next2return
 )
 
 --Importa el modelo necesario para el camino
 fn getPiezaCamino last actual next = (
-	--caso 0: abajo a arriba
-	if (last.y < next.y) then(
-		local tipoG = comparaPos actual next
-		
-		--importModel 
+		local tipoLast = comparaPos last actual
+	local tipoNext = comparaPos actual next
+	
+	--Linea recta
+	if(tipoLast == tipoNext) then(
+		importModel caminosPosibles[1]
+		if(tipoLast == 0 or tipoLast == 3) then rotate $ (angleaxis 90 [0,0,1])
 	)
-	
-	
-	--caso 1: izquierda a derecha
-	--caso 2: derecha a izquierda
-	--caso 3: arriba a abajo
+	--Giro camino
+	else(
+		importModel caminosPosibles[2]
+		
+		if(tipoLast == 0) then (
+			rotate $ (angleaxis -90 [0,0,1])
+			if(tipoNext == 2) then rotate $ (angleaxis -90 [0,0,1])
+		)
+		else if (tipoLast == 1) then (
+			rotate $ (angleaxis 90 [0,0,1])
+			if(tipoNext == 3) then rotate $ (angleaxis 90 [0,0,1])
+		)
+		else if (tipoLast == 2 and tipoNext == 3) then rotate $ (angleaxis -90 [0,0,1])
+		else if (tipoLast == 3 and tipoNext == 2) then rotate $ (angleaxis 90 [0,0,1])
+	)
+
 )
 
 --Importa el modelo necesario para el rio
@@ -232,8 +277,7 @@ fn getPiezaRio last actual next = (
 		print "posiciones"
 		print ((last as string) + " " + (actual as string) + " " + (next as string))
 		print "tipos"
-		print tipoLast
-		print tipoNext
+		print ((tipoLast as string)+" "+(tipoNext as string))
 		
 		if(tipoLast == 0) then (
 			rotate $ (angleaxis -90 [0,0,1])
@@ -251,25 +295,26 @@ fn getPiezaRio last actual next = (
 --Devuelve la distancia trazando la direccion hasta que colisiona con algo
 fn checkDirection lastP actualP = (
 	local distancia = 0
-	local nombre = ""
 	
 	if (lastP.x == actualP.x) then(
 		if (actualP.y > lastP.y) then (
 			--en el caso de que la x sea igual y apunta hacia arriba
 			for y = actualP.y to tamY do(
 				distancia += 1
-				nombre = sueloArray[actualP.x][y]
-				
-				if (findString nombre "suelo" < 0) then return distancia
+					
+				--print sueloArray[actualP.x][y]
+				if (findString sueloArray[actualP.x][y] "suelo" == undefined) then return distancia
 			)
 		)
 		else (
 			--en el caso de que la x sea igual y apunta hacia abajo
-			for y = actualP.y to 1 do(
+			local y = actualP.y
+			while (y>1 and distancia<7) do(
 				distancia += 1
-				nombre = sueloArray[actualP.x][y]
 				
-				if (findString nombre "suelo" < 0) then return distancia
+				--print sueloArray[actualP.x][y]
+				if (findString sueloArray[actualP.x][y] "suelo" == undefined) then return distancia
+				y -= 1
 			)
 		)
 	)
@@ -278,70 +323,78 @@ fn checkDirection lastP actualP = (
 			--en el caso de que la y sea igual y apunta hacia la derecha
 			for x = actualP.x to tamX do(
 				distancia += 1
-				nombre = sueloArray[x][actualP.y]
 				
-				if (findString nombre "suelo" < 0) then return distancia
+				--print sueloArray[x][actualP.y] 
+				if (findString sueloArray[x][actualP.y] "suelo" == undefined) then return distancia
 			)
 		)
 		else (
 			--en el caso de que la y sea igual y apunta hacia la izquierda
-			for x = actualP.x to 1 do(
+			local x = actualP.x
+			while (x>1 and distancia<7) do(
 				distancia += 1
-				nombre = sueloArray[x][actualP.y]
 				
-				if (findString nombre "suelo" < 0) then return distancia
+				--print sueloArray[x][actualP.y] 
+				if (findString sueloArray[x][actualP.y] "suelo" == undefined) then return distancia
+				x -= 1
 			)
 		)
 	)
-	/*
-	print actualP
-	print lastP
-	print nombre
-	*/
 	return distancia
 )
 
 --Devuelve la posicion cardinal proxima al valor por parametro
 fn getCardinal pactual plast = (
+	ngiros -=1
 	local var2return = [plast.x,plast.y]
 	
 	local possiblesRoutes = #()
+	local ruta
+	/*
 	if (pactual.y == plast.y) then 
 		possiblesRoutes = #([pactual.x, pactual.y+1], [pactual.x, pactual.y-1])
 	else 
 		possiblesRoutes = #([pactual.x-1, pactual.y],  [pactual.x+1, pactual.y])
-	
+	*/
+	if (plast.y == pactual.y) then(
+		possiblesRoutes = #([pactual.x-1, pactual.y], [pactual.x+1, pactual.y])
+		ruta = possiblesRoutes[random 1 2]
+	)
+	else (
+		possiblesRoutes = #([pactual.x, pactual.y-1], [pactual.x, pactual.y+1])
+		ruta = possiblesRoutes[random 1 2]
+	)
 	local dist1 = checkDirection pactual possiblesRoutes[1]
-	/*print possiblesRoutes[1]
-	print dist1*/
+	print ("RUTA1: "+(possiblesRoutes[1] as string)+ " " +(dist1 as string))
 	
 	local dist2 = checkDirection pactual possiblesRoutes[2]
-	/*print possiblesRoutes[2]
-	print dist2*/
-
+	print ("RUTA2: "+(possiblesRoutes[2] as string)+ " " +(dist2 as string))
+	
+	
 	if(dist1 > 7 and dist2>7) then(
 		var2return = possiblesRoutes[random 1 2]
-		caminoRecto = random 1 7
+		caminoRecto = random 3 7
 	)
 	else if (dist1 > dist2) then(
 		var2return = possiblesRoutes[1]
 		
 		local maxDist = 7
 		if (dist1 < maxDist) then maxDist=dist1
-		caminoRecto = random 1 maxDist
+		caminoRecto = random 3 maxDist-1
 	)
 	else (
 		var2return = possiblesRoutes[2]
 		
 		local maxDist = 7
 		if (dist2 < maxDist) then maxDist=dist2
-		caminoRecto = random 1 maxDist
+		caminoRecto = random 3 maxDist-1
 	)
+	
 	return var2return
 )
 
 --Actualiza los vectores de movimiento
-fn updatePosition limits &last &actual &next = (
+fn updateRio limits &last &actual &next = (
 	last = actual
 	actual = next
 	
@@ -349,7 +402,7 @@ fn updatePosition limits &last &actual &next = (
 	
 	--Se continua recto
 	if (caminoRecto > 0) then (
-		print("Avanzo recto. CaminoRecto: "+(caminoRecto as String) )
+		--print("Avanzo recto. CaminoRecto: "+(caminoRecto as String) )
 		
 		next = posPorOpcion opcion next
 		caminoRecto -= 1
@@ -361,12 +414,12 @@ fn updatePosition limits &last &actual &next = (
 	else (
 		local posibleNext = posPorOpcion opcion next
 		if(posibleNext.x == limits[1] or posibleNext.x == limits[2] or posibleNext.y == limits[3] or posibleNext.y == limits[4]) then(
-			print "casi giro al final del mapa :D"
+			--print "casi giro al final del mapa :D"
 			next = posibleNext
 			caminoRecto = 2
 		)
 		else (
-			print("Avanzo girando. CaminoRecto: "+(caminoRecto as String) )
+			--print("Avanzo girando. CaminoRecto: "+(caminoRecto as String) )
 			next = getCardinal actual last			
 		)
 	)
@@ -375,7 +428,8 @@ fn updatePosition limits &last &actual &next = (
 --Genera el rio
 fn crearRio uselessParam = (
 	local terminado = false
-	caminoRecto = random 1 5
+	caminoRecto = random 3 5
+	ngiros = 2
 	
 	--se declaran las posiciones que se iran actualizando
 	local lastpos = [0, 0]
@@ -387,35 +441,29 @@ fn crearRio uselessParam = (
 	local limites = getLimites tipo
 	local endPrepared = false
 	
-	/*
-	print "posicion inicial"	
-	print actualpos
-	print "limites"
-	print limites
-	*/
 	do(		
 		--se recorre la matriz de nombres y se selecciona el actual
 		local nombre = sueloArray[actualpos.x][actualpos.y]
-		--print nombre
 		execute ("select $'"+ nombre + "'")
 		
 		--se comprueba que la casilla seleccionada sea una pieza de suelo
 		if (findString $.name "suelo" > 0) then(
 			local object2delete = $
-			local baseName = $.name
 			
 			getPiezaRio lastpos actualpos nextpos
+			local baseName = $.name
+			
 			$.pos = object2delete.pos
 			$.name = uniquename (baseName as string)
-			--sueloArray[actualpos.x][actualpos.y] = $.name
+			sueloArray[actualpos.x][actualpos.y] = $.name
+			clearSelection()
 			
+			--print sueloArray
 			delete object2delete
 			
-			updatePosition limites &lastpos &actualpos &nextpos
+			updateRio limites &lastpos &actualpos &nextpos
 			
-			print("Actual: "+(actualpos as String) + "Siguiente: "+(nextpos as String) )
-
-
+			--print("Actual: "+(actualpos as String) + "Siguiente: "+(nextpos as String) )
 			
 			if (lastpos.x == limites[1] or lastpos.x == limites[2] or lastpos.y == limites[3] or lastpos.y == limites[4]) then(
 				if (endPrepared) then
@@ -424,56 +472,283 @@ fn crearRio uselessParam = (
 			)
 		)
 		else(
-			print "PIEZA INESPERADA: "+$.name
+			print "PIEZA INESPERADA: "
+		)
+	)while (not terminado)
+)
+
+fn updateCamino limits &last &actual &next = (
+	last = actual
+	actual = next
+	
+	local opcion = comparaPos last actual
+	local posibleNext = posPorOpcion opcion next
+	
+	--Se continua recto
+	if (caminoRecto > 0) then (
+		print("Avanzo recto. CaminoRecto: "+(caminoRecto as String) )
+		
+		next = posibleNext
+		caminoRecto -= 1
+		
+		if(next.x == limits[1] or next.x == limits[2]) then
+			caminoRecto = 2
+	)
+	--Se elige giro
+	else (
+		--Si JUSTO va a girar antes de acabar el camino, se extiende una casilla mas
+		if(posibleNext.x > (tamX*4/5) and (posibleNext.x == limits[1]-1 or posibleNext.x == limits[2]+1 or posibleNext.y == limits[3]-1 or posibleNext.y == limits[4]+1)) then(
+			print "casi giro al final del mapa :D"
+			next = posibleNext
+			caminoRecto = 2
+		)
+		--si no, seguimos normalmente
+		else (
+			local moveY = 0
+			local moveX = 0
+			local maxCamino = 4
+
+			--por si acaso se comprueba la zona peligrosa
+			if last.x < (tamX/5*4) and (last.y > (tamY-4)) then (
+				girarAbajo = true
+				if opcion == 0 then zonaPeligrosa = true
+				
+				print "se activa zona peligrosa"
+			)
+			--la otra zona peligrosa
+			else if last.x < (tamX/5*4) and (last.y < 4) then (
+				girarArriba = true
+				
+				if opcion == 3 then zonaPeligrosa = true
+			)
+			--si esta en zona peligrosa para salirse, nos alejamos de ella
+			if (zonaPeligrosa) then(
+				moveX = 1
+				moveY = 0
+				
+				print "se entra en zona peligrosa, moverse a la derecha"
+				zonaPeligrosa = false
+			)
+			else if girarArriba then(
+				moveX = 0
+				moveY = 1
+				
+				print "Giro hacia arriba forzado"
+				girarArriba = false
+			)
+			else if girarAbajo then(
+				moveX = 0
+				moveY = -1
+				
+				print "Giro hacia abajo forzado"
+				girarAbajo = false
+			)
+			else (
+				print("Giro normalmente. CaminoRecto: "+(caminoRecto as String) )
+				moveX = 1
+				
+				--Mientras se quiera bajar o subir, se comprueba que no venga ya de bajar(3) o subir(0)
+				moveY = random -1 1
+				if moveY==-1 then (
+					if opcion == 0 then moveY= random 0 1
+				)
+				else if moveY==1 then (
+					if opcion == 3 then moveY = random -1 0
+				)
+				if(moveY == -1 or moveY == 1) then(
+					moveX = 0
+					
+					local dist = checkDirection actual [next.x, next.y+moveY]
+					if dist < 4 then maxCamino = dist-1
+				)
+				else moveX = 1
+			)
+			
+			next = [next.x + moveX, next.y+moveY]
+			
+			caminoRecto = random 2 maxCamino
+		)
+	)
+)
+
+fn crearCamino uselessParam = (
+	local terminado = false
+	caminoRecto = random 1 5
+	local piezasdesconocidas = 0
+	
+	--se declaran las posiciones que se iran actualizando
+	local lastpos = [0, 0]
+	local actualpos = [0, 0]
+	local nextpos = [0, 0]
+	
+	--se encuentra la posicion inicial del rio y se obtienen los limites
+	local tipo = startCamino &actualpos &lastpos &nextpos
+	local limites = getLimites tipo
+
+	print("Inicial: "+(actualpos as String) + " Siguiente: "+(nextpos as String) )
+
+	print "\n EMPIEZA EL CAMINO"
+	do(		
+		--se recorre la matriz de nombres y se selecciona el actual
+		local nombre = sueloArray[actualpos.x][actualpos.y]
+		execute ("select $'"+ nombre + "'")
+
+		--se comprueba que la casilla seleccionada sea una pieza de suelo
+		if (findString $.name "suelo" > 0) then(
+			--Se almacena la posicion del objeto de suelo para poder reemplazarlo por el camino y borrarlo
+			local pos2move = $.pos
+			delete $
+			
+			--Se importa la pieza correspondiente dependiendo de la casilla anterior y posterior
+			getPiezacamino lastpos actualpos nextpos
+			
+			$.pos = pos2move
+			local baseName = $.name
+			$.name = uniquename (baseName as string)
+			sueloArray[actualpos.x][actualpos.y] = $.name
+			
+			--Se actualizan las posiciones y se avanza a la siguiente casilla
+			updateCamino limites &lastpos &actualpos &nextpos
+			print("Actual: "+(actualpos as String) + " Siguiente: "+(nextpos as String) )
+			
+			--Comprobacion para terminar el nivel
+			if(lastpos.x > (tamX/5*4) and (lastpos.y == tamY or lastpos.y == 1 or lastpos.x == tamX)) then (
+				terminado = true
+				local tip = comparaPos lastpos actualpos
+				nextpos = posPorOpcion tip nextpos
+			)
+		)
+		else(
+			print "PIEZA INESPERADA: "+$.name			
+			
+			--evitamos bucle infinito
+			piezasdesconocidas += 1
+			if piezasdesconocidas > 5 then
+				terminado = true
 		)
 		clearSelection()
 	)while (not terminado)
 )
 
-fn crearCamino uselessParam = (
-	local terminado = false
+fn spawnTorre idbase idcuerpo idtecho = (
+	local baseName
+	local base
+	local cuerpo
+	local cuerpo2
+	local techo
+	--Se importa el modelo de la base y se le cambia el nombre
+	importModel basesT[idbase]
+	baseName = $.name
+	$.name = uniquename (baseName as string)
+	move $ [0,0,4]
+	base = $
+	clearselection()
 	
-	local lastpos = [0, 0]
-	local actualpos = [0, 0]
-	local nextpos = [0, 0]
-	local limites = [0, 0]
+	--Se importa el modelo del cuerpo y se le cambia el nombre y la posicion
+	importModel cuerposT[idcuerpo]
+	baseName = $.name
+	$.name = uniquename (baseName as string)
+	move $ [0,0,8]
+	rotate $ (angleaxis -90 [0,0,1])
+	cuerpo = $
+	clearselection()
+
+	--Se importa el modelo del techo y se le cambia el nombre y la posicion
+	importModel techosT[idtecho]
+	baseName = $.name
+	$.name = uniquename (baseName as string)
+	if idtecho == 2 then move $ [0,0,15.13]
+	else if idtecho == 7 or idtecho == 8 or idtecho == 9 then move $ [0,0,12.4]
+	else move $ [0,0,14.8359]
+	rotate $ (angleaxis -90 [0,0,1])
+	techo = $
+	clearselection()
 	
-	--se encuentra la posicion inicial del camino
-	local tipo = startCamino &actualpos &lastpos &nextpos
-	limites = getLimites tipo
+	select cuerpo
+	selectmore techo
+	$.parent = base
+	select base
 	
+	local nombreUnic = uniquename ("Torre")
+)
+
+fn generarTorres uselessParam = (
+	local torresRestantes = nTorres
+	if not usingTowerAmount then torresRestantes = maxTorres*porTorres/100
+	local posR = -1
 	
-	
-	/*
-	print lastpos
-	print actualpos
-	print nextpos
-	*/
+	local count = 0
 	do(
-		--se recorre la matriz de nombres y se selecciona el actual
-		local nombre = sueloArray[actualpos.x][actualpos.y]		
-		execute ("select $'"+ nombre + "'")
+		local inserted = false
+		local xory = random 0 1
 		
-		--se comprueba que la casilla seleccionada sea una pieza de suelo
-		if (findString $.name "suelo" > 0) then(
-			local object2delete = $
-			getPiezaCamino 0 lastpos actualpos nextpos
-			$.pos = object2delete.pos
-			delete object2delete
+		if (xory == 0) then(
+			posR = random 1 tamY
 			
-			--nextPosCamino lastpos nextpos
-			--TODO; FUNCION PARA OBTENER el tipo de linea que hay que usar (normal o giro)
-			-- y para calcular la ruta			
-			--TODO: condicion para que termine el camino
+			local x=1
+			while (x<tamX-1 and not inserted) do(
+				if x == tamX-1 then inserted =true
+				else if (findstring sueloArray[x+1][posR] "linea" != undefined and findstring sueloArray[x][posR] "suelo" != undefined) then(
+					
+					--se selecciona el objeto
+					local nombre = sueloArray[x][posR]
+					execute ("select $'"+ nombre + "'")
+					
+					local pos = $.pos
+					
+					local rp1 = random 1 7
+					local rp2 = random 1 6
+					local rp3 = random 1 9
+					spawnTorre rp1 rp2 rp3
+					
+					$.pos= pos
+					move $ [0,0,4]
+					sueloArray[x][posR] = uniqueName("Torre")					
+					
+					torresRestantes -= 1
+					inserted = true
+				)
+				x+=1
+			)
 		)
-		else if (findString $.name "piezaRio" > 0) then(
-			local object2delete = $
-			--getPuente lastpos actualpos nextpos
-			
-			delete object2delete
+		else(
+			posR = random 1 (tamX)
+			local y=1 
+			while (y<tamY-1 and not inserted) do(
+				if y == tamY-1 then inserted =true
+				else if (findstring sueloArray[posR][y+1] "linea" != undefined and findstring sueloArray[posR][y] "suelo" != undefined ) then(
+					--se selecciona el objeto
+					local nombre = sueloArray[posR][y]
+					execute ("select $'"+ nombre + "'")
+					
+					local pos = $.pos
+					
+					local rp1 = random 1 7
+					local rp2 = random 1 6
+					local rp3 = random 1 9
+					spawnTorre rp1 rp2 rp3
+					
+					$.pos= pos
+					move $ [0,0,4]
+					sueloArray[posR][y] = uniqueName("Torre")
+					
+					torresRestantes-=1
+					inserted = true
+				)
+				y+=1
+			)
 		)
-		clearSelection()
-	)while (not terminado) 
+		count+=1
+	)while (torresRestantes > 0 and count < 20)
+)
+
+fn generarDecoracion uselessParam = (
+	if(randomPiezasD) then (
+		
+	)
+	else (
+		
+	)
 )
 
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -524,14 +799,20 @@ rollout general "General" width:296 height:104(
 	)
 	
 	group "Grid Size"(
-		spinner spinTamX "Size X" range:[10, 40, tamX] type:#integer align:#center
-		spinner spinTamY "Size Y" range:[10, 40, tamY] type:#integer align:#center
+		spinner spinTamX "Size X" range:[10, 30, tamX] type:#integer align:#center
+		spinner spinTamY "Size Y" range:[10, tamX, tamY] type:#integer align:#center
 		
 		on spinTamX changed param do(
-			updateTamX spinTamX.value		
+			tamX = param
+			if tamY>param then tamY = param
+			spinTamY.range= [10, param, tamY]
+			
+			updateNTowers tamX tamY
 		)
-		on spinTamY changed param do( 
-			updateTamY spinTamY.value
+		on spinTamY changed param do(
+			tamY = param
+			
+			updateNTowers tamX tamY
 		)
 	)
 	
@@ -557,10 +838,14 @@ rollout general "General" width:296 height:104(
 	
 	-- BOTON RANDOM
 	on btnRandom pressed do (
-		spinTamX.value = random 10 40
-		updateTamX spinTamX.value
-		spinTamY.value = random 10 40
-		updateTamY spinTamY.value
+		spinTamX.value = random 10 30
+		tamX = spinTamX.value
+		spinTamY.value = random 10 tamX
+		tamY =  spinTamY.value
+		spinTamY.range= [10, tamX, tamY]
+		
+		--actualizar torres maximas
+		updateNTowers tamX tamY
 		
 		customDecoracion.chkRandomDecoration.state = true
 		randomPiezasD =true
@@ -632,13 +917,18 @@ rollout customDecoracion "Decoration" width:296 height:104(
 	checkBox chkRandomDecoration "Randomize Decoration" 
 
 	group "Types"(
-		checkBox chkTreeN "Normal Trees" 
-		checkBox chkTreeT "Triple Trees"
-		checkBox chkTreeP "Pink Trees"
-		checkBox chkRockN "Normal Rocks"
-		checkBox chkRockD "Double Rocks"
+		checkBox chkTreeN "Normal Trees"  checked:true
+		checkBox chkTreeT "Triple Trees" checked:true
+		checkBox chkTreeP "Pink Trees" checked:true
+		checkBox chkRockN "Normal Rocks" checked:true
+		checkBox chkRockD "Double Rocks" checked:true
+
+		on chkTreeN changed state do(	arboles= state)
+		on chkTreeT changed state do(	arbolesTriples = state	)
+		on chkTreeP changed state do(	arbolesRosas = state)
+		on chkRockN changed state do(	piedras = state	)
+		on chkRockD changed state do(	piedrasDobles = state	)
 		
-		on chkTreeN changed state do(		)
 	)
 	group "Amount"(
 		spinner spinPDecoration "Number (%)" width:100 height:16 range:[0, 100, 20] type:#integer align:#left 
@@ -694,11 +984,14 @@ rollout generar "Generate Level" width:296 height:104(
 			--Borrar objetos
 			delete objects
 			free objects
+			--Actualizar valores
 			
 			--Generar Mapa
 			crearSuelo 0
-			crearRio 0
-			--crearCamino 0
+			--crearRio 0
+			crearCamino 0
+			generarTorres 0
+			generarDecoracion 0
 			
 			--Crear Camara
 			local camx = centroX - 50
@@ -719,6 +1012,6 @@ createdialog generadorTD
 AddSubRollout generadorTD.rollDentro general
 AddSubRollout generadorTD.rollDentro customTorres
 AddSubRollout generadorTD.rollDentro customDecoracion
-AddSubRollout generadorTD.rollDentro customIlumination
+--AddSubRollout generadorTD.rollDentro customIlumination
 AddSubRollout generadorTD.rollDentro generar
 
