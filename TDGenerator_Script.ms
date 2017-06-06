@@ -63,6 +63,7 @@ piedraDoble = sysInfo.currentdir + "\modelos\piedraDoble.3ds"
 arbolRosa = sysInfo.currentdir + "\modelos\arbolRosa.3ds"
 arbol = sysInfo.currentdir + "\modelos\arbol.3ds"
 arbolTriple = sysInfo.currentdir + "\modelos\arbolTriple.3ds"
+decoracion= #(arbol, arbolTriple, arbolRosa, piedra, piedraDoble)
 
 baseTorre1 = sysInfo.currentdir + "\modelos\\torres\baseTorre1.3ds"
 baseTorre2 = sysInfo.currentdir + "\modelos\\torres\baseTorre2.3ds"
@@ -498,7 +499,7 @@ fn updateCamino limits &last &actual &next = (
 	else (
 		--Si JUSTO va a girar antes de acabar el camino, se extiende una casilla mas
 		if(posibleNext.x > (tamX*4/5) and (posibleNext.x == limits[1]-1 or posibleNext.x == limits[2]+1 or posibleNext.y == limits[3]-1 or posibleNext.y == limits[4]+1)) then(
-			print "casi giro al final del mapa :D"
+			print "FINISH"
 			next = posibleNext
 			caminoRecto = 2
 		)
@@ -513,13 +514,14 @@ fn updateCamino limits &last &actual &next = (
 				girarAbajo = true
 				if opcion == 0 then zonaPeligrosa = true
 				
-				print "se activa zona peligrosa"
+				print ("se activa zona peligrosa" + opcion as string)
 			)
 			--la otra zona peligrosa
 			else if last.x < (tamX/5*4) and (last.y < 4) then (
 				girarArriba = true
 				
 				if opcion == 3 then zonaPeligrosa = true
+				print ("se activa zona peligrosa" + opcion as string)
 			)
 			--si esta en zona peligrosa para salirse, nos alejamos de ella
 			if (zonaPeligrosa) then(
@@ -544,7 +546,7 @@ fn updateCamino limits &last &actual &next = (
 				girarAbajo = false
 			)
 			else (
-				print("Giro normalmente. CaminoRecto: "+(caminoRecto as String) )
+				print("Giro normalmente. CaminoRecto: "+(caminoRecto as String) +" Opcion: "+(opcion as String))
 				moveX = 1
 				
 				--Mientras se quiera bajar o subir, se comprueba que no venga ya de bajar(3) o subir(0)
@@ -594,7 +596,7 @@ fn crearCamino uselessParam = (
 		execute ("select $'"+ nombre + "'")
 
 		--se comprueba que la casilla seleccionada sea una pieza de suelo
-		if (findString $.name "suelo" > 0) then(
+		if (findString $.name "suelo" !=undefined) then(
 			--Se almacena la posicion del objeto de suelo para poder reemplazarlo por el camino y borrarlo
 			local pos2move = $.pos
 			delete $
@@ -743,12 +745,75 @@ fn generarTorres uselessParam = (
 )
 
 fn generarDecoracion uselessParam = (
+	local decorationpos = #(true,true,true,true,true)
+	local percent= 0
+	local nohacernada = false
+	
 	if(randomPiezasD) then (
+		for i = 1 to 5 do (
+			local rand = random 1 5
+			if (rand == 3) then decorationpos[i] = false
+		)
 		
+		percent = random 0 100
 	)
 	else (
+		decorationpos[1] = arboles
+		decorationpos[2] = arbolesTriples
+		decorationpos[3] = arbolesRosas
+		decorationpos[4] = piedras
+		decorationpos[5] = piedrasDobles
 		
+		if(not arboles and not arbolesTriples and not arbolesRosas and not piedras and not piedrasDobles) then nohacernada = true
+		
+		percent = porDecoracion
 	)
+	
+	if(not nohacernada) then(
+		local disponibles = 0
+		for x = 1 to tamX do (
+			for y = 1 to tamY do(
+					if (findstring sueloArray[x][y] "suelo" != undefined) then disponibles+=1
+			)
+		)
+		
+		disponibles = disponibles/3*percent/100
+		
+		while disponibles>0 do(
+			local randx = random 1 tamX
+			local randy = random 1 tamY
+			
+			if (findstring sueloArray[randx][randy] "suelo" != undefined) then (
+				local nombre = sueloArray[randx][randy]
+				execute ("select $'"+ nombre + "'")
+				--se almacena la posicion del objeto suelo y se borra
+				local pos = $.pos
+				delete $
+				
+				--Se importa el modelo de la decoracion
+				local actualIndex = random 1 5
+				if (not decorationpos[actualIndex]) then(
+					local counter = 0
+					while (counter<6 and not decorationpos[actualIndex]) do(
+						actualIndex += 1
+						counter+=1
+						if actualIndex > 5 then actualIndex = 1
+					)
+					
+				)
+				importModel decoracion[actualIndex]
+				
+				local baseName = $.name
+				
+				$.name = uniqueName(baseName as string)
+				$.pos= pos
+				sueloArray[randx][randy] = $.name
+
+				disponibles-=1
+			)
+		)
+	)
+	else print "NO HAY DECORACION"
 )
 
 -- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// --
@@ -762,8 +827,8 @@ rollout generadorTD "Tower Defense Generator" width:210 height:710(
 
 rollout general "General" width:296 height:104(
 	group "Global buttons"(	
-		button 'btnRandom' "RANDOMIZE" width:80 height:20 enabled:true align:#left
-		button 'btnRestart' "RESTART" width:80 height:20 enabled:true  align:#right offset:[0, -25]
+		button btnRandom "RANDOMIZE" width:80 height:20 enabled:true align:#left
+		button btnRestart "RESTART" width:80 height:20 enabled:true  align:#right offset:[0, -25]
 	)
 	group "Level Position"(
 		spinner spinPosicionCX "X: " width:64 height:16 range:[-200,200,centroX] align:#center type:#float scale:0.5
@@ -858,10 +923,10 @@ rollout general "General" width:296 height:104(
 	)
 	-- BOTON RESTART
 	on btnRestart pressed do (
-		spinTamX.value = 10
-		updateTamX 10
-		spinTamY.value = 10
-		updateTamY 10
+		spinTamX.value =10
+		tamX = spinTamX.value
+		tamY =  spinTamY.value
+		spinTamY.range= [10, tamX, tamY]
 		
 		customDecoracion.chkRandomDecoration.state = false
 		randomPiezasD = false
